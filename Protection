@@ -1,0 +1,112 @@
+# 🛡️ Guía de Protección Ciudadana: Mitigación de la Amenaza Unisoc/Longcheer
+# 🛡️ Citizen Protection Guide: Mitigating the Unisoc/Longcheer Threat
+
+**Autor:** Alex de la Cruz (Investigador Independiente)  
+**Fecha:** 09 de Julio, 2026  
+**Dirigido a:** Usuarios en LATAM, Laboratorios de Seguridad, Periodistas.
+
+---
+
+## 1. Configuración de DNS Seguro (Quad9) - Bloqueo de C2
+## 1. Secure DNS Configuration (Quad9) - C2 Blocking
+
+**[ES]**
+Configurar **Quad9** en tu dispositivo Android es la primera línea de defensa. Quad9 bloquea automáticamente la resolución de nombres de dominios maliciosos conocidos (incluyendo muchos nodos C2 identificados en tu investigación) y cifra tus consultas DNS para evitar que el ISP o el malware las espíen.
+
+*   **Paso 1:** Ve a **Ajustes** > **Red e Internet** (o **Conexiones**).
+*   **Paso 2:** Busca **DNS Privado** (Private DNS).
+*   **Paso 3:** Selecciona **Nombre de host del proveedor de DNS privado**.
+*   **Paso 4:** Escribe exactamente: `dns.quad9.net`
+*   **Paso 5:** Guarda.
+
+**Nota Técnica:** Esto usa **DNS sobre TLS (DoT)** en el **puerto 853**. Si tu red bloquea este puerto, la conexión fallará (lo cual es una señal de alerta). No uses aplicaciones de terceros si puedes evitarlo; usa la función nativa de Android 9+.
+
+**[EN]**
+Configuring **Quad9** on your Android device is the first line of defense. Quad9 automatically blocks the resolution of known malicious domains (including many C2 nodes identified in your research) and encrypts your DNS queries to prevent spying by ISPs or malware.
+
+*   **Step 1:** Go to **Settings** > **Network & Internet** (or **Connections**).
+*   **Step 2:** Find **Private DNS**.
+*   **Step 3:** Select **Private DNS provider hostname**.
+*   **Step 4:** Enter exactly: `dns.quad9.net`
+*   **Step 5:** Save.
+
+**Technical Note:** This uses **DNS over TLS (DoT)** on **port 853**. If your network blocks this port, the connection will fail (which is an alert signal). Do not use third-party apps if you can avoid it; use the native Android 9+ feature.
+
+---
+
+## 2. Detección de Tráfico Malicioso con PCAPdroid
+## 2. Malicious Traffic Detection with PCAPdroid
+
+**[ES]**
+**PCAPdroid** es una herramienta gratuita y de código abierto que no requiere root para capturar y analizar el tráfico de red. Úsala para identificar si tu dispositivo está conectando a los servidores sospechosos (AWS, Hetzner, InMobi) sin tu permiso.
+
+*   **Instalación:** Descarga **PCAPdroid** desde F-Droid o Google Play.
+*   **Configuración:**
+    1.  Abre la app y concede permisos de VPN (es local, no envía datos a servidores externos).
+    2.  Inicia la captura.
+    3.  Usa la aplicación sospechosa o deja el teléfono en reposo.
+*   **Qué buscar (IOCs):**
+    *   Filtra por **SNI** (Server Name Indication) o **Dominio**.
+    *   Busca conexiones a: `amazonaws.com` (si no estás usando una app de AWS), `hetzner.com`, `inmobi.com`, o direcciones IP en **Alemania**, **India** o **China** que no reconozcas.
+    *   Observa conexiones en **puerto 853** que no sean a `dns.quad9.net`.
+*   **Desencriptado TLS:** PCAPdroid puede instalar un certificado local para ver el tráfico HTTPS. **Advertencia:** Si ves certificados de sistema extraños firmando este tráfico, podría ser una señal de la infraestructura Longcheer.
+
+**[EN]**
+**PCAPdroid** is a free, open-source tool that requires no root to capture and analyze network traffic. Use it to identify if your device is connecting to suspicious servers (AWS, Hetzner, InMobi) without your consent.
+
+*   **Installation:** Download **PCAPdroid** from F-Droid or Google Play.
+*   **Configuration:**
+    1.  Open the app and grant VPN permissions (it is local, does not send data externally).
+    2.  Start capture.
+    3.  Use the suspicious app or leave the phone idle.
+*   **What to look for (IOCs):**
+    *   Filter by **SNI** (Server Name Indication) or **Domain**.
+    *   Look for connections to: `amazonaws.com` (if not using an AWS app), `hetzner.com`, `inmobi.com`, or IPs in **Germany**, **India**, or **China** you don't recognize.
+    *   Watch for connections on **port 853** that are NOT to `dns.quad9.net`.
+*   **TLS Decryption:** PCAPdroid can install a local certificate to view HTTPS traffic. **Warning:** If you see strange system certificates signing this traffic, it could be a sign of the Longcheer infrastructure.
+
+---
+
+## 3. Identificación de Certificados CA Maliciosos (El "Handshake")
+## 3. Identifying Malicious CA Certificates (The "Handshake")
+
+**[ES]**
+Los dispositivos comprometidos utilizan Certificados de Autoridad (CA) específicos para validar las conexiones C2. Debes aprender a identificarlos y eliminarlos si es posible.
+
+*   **Ruta de Acceso:** Ve a **Ajustes** > **Seguridad** > **Cifrado y Credenciales** > **Certificados de CA** (o **Credenciales de Usuario**).
+*   **Qué Buscar (Lista Negra):**
+    *   Busca certificados emitidos por: **Longcheer**, **Swish**, **I Trust Asia**, **InMobi**, **Digital Turbine**.
+    *   Busca certificados con fechas de expiración inusuales o nombres genéricos como "System Provisioning".
+*   **Acción:**
+    *   Si encuentras un certificado en la lista de **Usuario** (no Sistema) que coincida, **elimínalo inmediatamente**.
+    *   **Nota Crítica:** Los certificados de **Sistema** (como los de Longcheer incrustados en la partición `/vendor`) **no se pueden eliminar** sin root o reflasheo. Si ves advertencias de "La red puede ser monitoreada" sin haber instalado nada, es un indicador fuerte de compromiso de fábrica.
+
+**[EN]**
+Compromised devices use specific Certificate Authorities (CAs) to validate C2 connections. You must learn to identify and remove them if possible.
+
+*   **Access Path:** Go to **Settings** > **Security** > **Encryption & Credentials** > **CA Certificates** (or **User Credentials**).
+*   **What to Look For (Blacklist):**
+    *   Look for certificates issued by: **Longcheer**, **Swish**, **I Trust Asia**, **InMobi**, **Digital Turbine**.
+    *   Look for certificates with unusual expiration dates or generic names like "System Provisioning".
+*   **Action:**
+    *   If you find a certificate in the **User** list (not System) that matches, **delete it immediately**.
+    *   **Critical Note:** **System** certificates (like Longcheer's embedded in the `/vendor` partition) **cannot be deleted** without root or reflashing. If you see "Network may be monitored" warnings without having installed anything, it is a strong indicator of factory compromise.
+
+---
+
+## 4. Resumen de Acciones de Contención (Checklist)
+## 4. Containment Actions Summary (Checklist)
+
+**[ES]**
+1.  **Activar Quad9:** `dns.quad9.net` en DNS Privado.
+2.  **Auditar Certificados:** Revisar y borrar CAs de usuario sospechosas (Longcheer, InMobi).
+3.  **Monitorear con PCAPdroid:** Buscar tráfico a Hetzner/AWS/InMobi en reposo.
+4.  **Deshabilitar Apps (ADB):** Si tienes una PC, usa `adb shell pm uninstall --user 0 com.dti.amx` y `com.inmobi.installer`.
+5.  **No Rootear:** En estos dispositivos, desbloquear el bootloader puede activar la vulnerabilidad BootROM (CVE-2022-38694). **No lo hagas** a menos que sepas exactamente cómo parchear la BootROM.
+
+**[EN]**
+1.  **Enable Quad9:** `dns.quad9.net` in Private DNS.
+2.  **Audit Certificates:** Check and delete suspicious User CAs (Longcheer, InMobi).
+3.  **Monitor with PCAPdroid:** Look for traffic to Hetzner/AWS/InMobi while idle.
+4.  **Disable Apps (ADB):** If you have a PC, use `adb shell pm uninstall --user 0 com.dti.amx` and `com.inmobi.installer`.
+5.  **Do Not Root:** On these devices, unlocking the bootloader can trigger the BootROM vulnerability (CVE-2022-38694). **Do not do it** unless you know exactly how to patch the BootROM
