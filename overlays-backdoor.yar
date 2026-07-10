@@ -42,3 +42,9 @@ rule SupplyChain_Overlay_Abuse_Unisoc {
             ($ns_sprd and ($path_vendor or $path_system) and $build_anomaly and $inject_keyword)
         )
 }   
+
+Technical Justification for Rule Unisoc_Vendor_Overlay_Backdoor_Fleet:
+
+Hardware Fingerprinting: The inclusion of cpu_T606 and the board codename qogirl6 provides a unique fingerprint for the compromised Unisoc T606 reference design manufactured by Longcheer. These strings are embedded in the proprietary overlay binaries and are rarely, if ever, present in legitimate overlays from other SoC vendors (Qualcomm, MediaTek).
+Resilience Against Path Obfuscation: The refined logic prioritizes the presence of the Unisoc namespace combined with hardware identifiers. This ensures detection even if the specific filename (unisoc_overlay) is slightly altered in future firmware updates, while still requiring the file to reside within the trusted /vendor/overlay directory structure.
+Fleet-Wide Scalability: Designed for high-volume scanning, this rule targets the persistent mechanism (RRO) used to maintain the backdoor across reboots and factory resets, making it essential for enterprise mobility management (EMM) and government fleet security assessments.
