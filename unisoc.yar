@@ -23,3 +23,4 @@ rule Unisoc_Vendor_Overlay_Backdoor_Fleet {
             ($vendor_path and (2 of ($overlay_name*, $cpu_id, $board_codename)))
         )
 }
+
