@@ -1,3 +1,7 @@
+// ---------------------------------------------------------------------------
+// SECCIÓN 2: DETECCIÓN DE CERTIFICADOS Y FIRMA DE CADENA DE SUMINISTRO
+// ---------------------------------------------------------------------------
+
 rule Longcheer_Root_CA_Certificate {
     meta:
         description = "Detects the compromised Longcheer Root CA certificate installed in Unisoc T606/T616 supply chain"
@@ -24,20 +28,18 @@ rule Longcheer_Root_CA_Certificate {
         $rsa_exponent = { 01 00 01 }
         
         // Specific Modulus Bytes (Unique fingerprint of the public key)
-        // First 16 bytes of the modulus
         $modulus_start = { d6 0f bb 9d 0f bb a8 05 8e 66 f2 68 c8 38 bc 05 }
-        // Last 16 bytes of the modulus
         $modulus_end = { 5e af a2 f2 c3 5a 32 ea 56 83 7e f0 19 12 2c 87 6d }
 
         // X509v3 Subject Key Identifier (Unique to this cert)
         $key_id = { 97 B6 E1 F1 B2 AC DB DA 80 5C 56 B0 4E 82 D0 52 83 3C 8F 7B }
 
     condition:
-        // Detect if all key identifiers are present
+        // Detect if key identifiers are present
         (all of ($issuer_cn, $issuer_o, $valid_to)) and 
-        ($key_id in file) and
-        ($modulus_start in file) and
-        ($modulus_end in file)
+        $key_id and
+        $modulus_start and
+        $modulus_end
 }
 
 rule Longcheer_Certificate_Serial_Number {
@@ -51,7 +53,6 @@ rule Longcheer_Certificate_Serial_Number {
     
     strings:
         // Full Serial Number in Hex (Big Endian DER encoding)
-        // Note: YARA matches raw bytes. The serial is 21 bytes including the leading 00 for positive integer
         $serial_full = { 22 85 26 b0 d1 ef 90 c3 b8 ed 56 8a 49 c3 71 4f 6a 39 50 6b }
         
         // Partial Serial Matches (for fragmented memory or logs)
@@ -63,9 +64,10 @@ rule Longcheer_Certificate_Serial_Number {
         $serial_ascii_lower = "228526b0d1ef90c3b8ed568a49c3714f6a39506b" ascii
 
     condition:
-        $serial_full in file or 
+        $serial_full or 
         (all of ($serial_start, $serial_end)) or 
-        any of ($serial_ascii, $serial_ascii_lower)
+        $serial_ascii or 
+        $serial_ascii_lower
 }
 
 rule Unisoc_Longcheer_Firmware_Signature {
@@ -82,21 +84,20 @@ rule Unisoc_Longcheer_Firmware_Signature {
         $longcheer_pkg = "com.longcheer" ascii nocase
         $longcheer_str = "Longcheer" ascii
         
-        // Unisoc/Spreadtrum specific strings often found alongside Longcheer certs
+        // Unisoc/Spreadtrum specific strings
         $unisoc_str = "Unisoc" ascii
         $spreadtrum_str = "Spreadtrum" ascii
         $sprd_pkg = "com.spreadtrum" ascii
         
         // Certificate Chain Markers (PKCS#7 / CMS)
-        $pkcs7_oid = { 2A 86 48 86 F7 0D 01 07 02 } // id-signedData
-        $x509_seq = { 30 82 } // Common X509 sequence start
+        $pkcs7_oid = { 2A 86 48 86 F7 0D 01 07 02 } 
+        $x509_seq = { 30 82 } 
 
         // Specific permissions linked to Longcheer builds
         $perm_ims = "com.spreadtrum.ims.permisson.IMS_COMMON" ascii
         $perm_stk = "android.permission.RECEIVE_STK_COMMANDS" ascii
 
     condition:
-        // Detect if file contains Longcheer identifier AND is associated with Unisoc/Spreadtrum components
         (any of ($longcheer_pkg, $longcheer_str)) and 
         (any of ($unisoc_str, $spreadtrum_str, $sprd_pkg, $perm_ims, $perm_stk)) and
         (any of ($pkcs7_oid, $x509_seq))
@@ -129,8 +130,8 @@ rule Operation_Silent_Rescue_Composite_Indicator {
 
     condition:
         // High confidence if Longcheer cert is found with OMA CP and Motorola components
-        ($lc_cert in file) and 
-        ($omacp_pkg in file) and 
-        ($moto_pkg in file) and
+        $lc_cert and 
+        $omacp_pkg and 
+        $moto_pkg and
         (any of ($moto_domain, $wap_push, $oma_cp))
 }   
